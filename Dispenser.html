@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dispenser hydraulic lift simulator</title>
+<style>
+:root{--bg:#eef1f4;--card:#fff;--ink:#1b2733;--mut:#5b6b7a;--line:#c5cdd5;--oil:#d97f00;--ret:#2a7ab0;--stop:#c0392b;--ok:#2e8b57;--steel:#8a97a3;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10171e;--card:#18222b;--ink:#e6edf3;--mut:#93a4b3;--line:#32414f;--oil:#ffa51f;--ret:#4aa3d8;--steel:#6d7c89}}
+:root[data-theme="dark"]{--bg:#10171e;--card:#18222b;--ink:#e6edf3;--mut:#93a4b3;--line:#32414f;--oil:#ffa51f;--ret:#4aa3d8;--steel:#6d7c89}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:1100px;margin:0 auto;padding:16px}
+h1{font-size:1.35rem;margin:0 0 2px}
+.sub{color:var(--mut);margin:0 0 14px}
+.wrap{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:14px;align-items:start}
+@media(max-width:820px){.wrap{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px}
+svg{width:100%;height:auto;display:block}
+.t{fill:var(--ink);font-size:11px}.m{fill:var(--mut);font-size:10px}
+#base path{fill:none;stroke:var(--line);stroke-width:7;stroke-linejoin:round}
+#flow path{fill:none;stroke-width:4;stroke-dasharray:9 9;stroke-linecap:round;opacity:0}
+h2{font-size:.8rem;margin:14px 0 6px;color:var(--mut);font-weight:600}
+h2:first-child{margin-top:0}
+button{font:inherit;color:var(--ink);background:var(--card);border:1.5px solid var(--steel);border-radius:8px;padding:10px 12px;cursor:pointer;min-height:44px}
+button:focus-visible,input:focus-visible{outline:3px solid var(--ret);outline-offset:2px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.full{width:100%}
+button.on{background:var(--ink);color:var(--card);border-color:var(--ink)}
+#stop{border-color:var(--stop);color:var(--stop);font-weight:700}
+#stop:active{background:var(--stop);color:#fff}
+input[type=range]{width:100%}
+label{display:flex;justify-content:space-between;font-size:.85rem}
+.g{margin:8px 0}.g div{display:flex;justify-content:space-between;font-size:.85rem}
+.g i{display:block;height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:3px}
+.g u{display:block;height:100%;width:0;background:var(--oil)}
+#msg{margin-top:12px;padding:10px;border-left:4px solid var(--ret);background:var(--bg);font-size:.88rem;min-height:3.6em}
+</style></head><body><main>
+<h1>Dispenser hydraulic lift</h1>
+<p class="sub">Engage the PTO, then raise, stop or lower the platform. Oil flow is animated along each line.</p>
+<div class="wrap">
+<div class="card">
+<svg viewBox="0 0 680 400" role="img" aria-label="Hydraulic circuit: PTO, gear pump, valves, cylinder and tank">
+<rect x="20" y="140" width="100" height="60" rx="6" fill="var(--card)" stroke="var(--ink)"/>
+<text class="t" x="70" y="166" text-anchor="middle">Engine +</text><text class="t" x="70" y="181" text-anchor="middle">gearbox</text>
+<line id="shaft" x1="120" y1="170" x2="200" y2="170" stroke="var(--steel)" stroke-width="5"/>
+<rect x="150" y="158" width="6" height="24" fill="var(--ink)"/><rect id="clutch" x="170" y="158" width="6" height="24" fill="var(--ink)"/>
+<text class="m" x="163" y="150" text-anchor="middle">PTO clutch</text>
+<g id="base"></g>
+<circle cx="230" cy="170" r="30" fill="var(--card)" stroke="var(--ink)" stroke-width="1.5"/>
+<g id="g1"><circle cx="217" cy="170" r="9" fill="none" stroke="var(--steel)" stroke-width="5" stroke-dasharray="4.4 4.4"/></g>
+<g id="g2"><circle cx="243" cy="170" r="9" fill="none" stroke="var(--steel)" stroke-width="5" stroke-dasharray="4.4 4.4"/></g>
+<text class="t" x="230" y="134" text-anchor="middle">Gear pump</text>
+<rect x="290" y="105" width="20" height="30" fill="var(--card)" stroke="var(--ink)"/><path d="M293 130L307 110" stroke="var(--ink)" stroke-width="1.5"/>
+<text class="t" x="284" y="123" text-anchor="end">Relief 160 bar</text>
+<rect id="vb" x="340" y="120" width="100" height="80" rx="6" fill="var(--card)" stroke="var(--ink)" stroke-width="1.5"/>
+<text class="t" x="390" y="138" text-anchor="middle">Direction valve</text>
+<text class="t" id="vs" x="390" y="162" text-anchor="middle" font-weight="700">NEUTRAL</text>
+<text class="m" id="vd" x="390" y="180" text-anchor="middle">pump to tank</text>
+<circle cx="500" cy="205" r="7" fill="var(--card)" stroke="var(--ink)"/><circle cx="500" cy="205" r="2.5" fill="var(--ink)"/>
+<text class="t" x="490" y="224" text-anchor="end">Check valve</text>
+<rect x="380" y="255" width="65" height="30" rx="4" fill="var(--card)" stroke="var(--ink)"/>
+<text class="m" x="412" y="267" text-anchor="middle">Lowering</text><text class="m" x="412" y="279" text-anchor="middle">valve</text>
+<rect x="540" y="250" width="40" height="90" fill="var(--card)" stroke="var(--ink)" stroke-width="1.5"/>
+<rect id="co" x="542" y="338" width="36" height="0" fill="var(--oil)" opacity=".55"/>
+<rect id="rod" x="556" y="250" width="8" height="0" fill="var(--steel)"/>
+<g id="plat"><rect x="500" y="234" width="120" height="16" rx="3" fill="var(--ink)"/><text x="560" y="246" text-anchor="middle" font-size="10" fill="var(--card)">Platform</text></g>
+<text class="t" x="560" y="356" text-anchor="middle">Lift cylinder</text>
+<rect x="30" y="260" width="120" height="120" fill="none" stroke="var(--ink)" stroke-width="1.5"/>
+<rect id="oil" x="32" y="290" width="116" height="88" fill="var(--ret)" opacity=".4"/>
+<text class="t" x="90" y="396" text-anchor="middle">Oil tank</text>
+<text class="m" x="500" y="388" text-anchor="middle">Return line</text>
+<g id="flow"></g>
+</svg></div>
+<aside class="card">
+<h2>Drive</h2>
+<button id="pto" class="full">Engage PTO gear</button>
+<label style="margin-top:10px">Engine speed <b id="rv">1200 rpm</b></label>
+<input id="rpm" type="range" min="600" max="2200" step="50" value="1200" aria-label="Engine speed">
+<h2>Platform</h2>
+<div class="row"><button id="up">Up</button><button id="down">Down knob</button></div>
+<button id="stop" class="full" style="margin-top:8px">STOP</button>
+<label style="margin-top:10px">Lowering speed <b id="lv">8 s</b></label>
+<input id="low" type="range" min="0.04" max="0.3" step="0.01" value="0.12" aria-label="Lowering speed">
+<h2>Readings</h2>
+<div class="g"><div><span>Pump pressure</span><b id="pp">0 bar</b></div><i><u id="pb"></u></i></div>
+<div class="g"><div><span>Cylinder pressure</span><b id="cp">0 bar</b></div><i><u id="cb"></u></i></div>
+<div class="g"><div><span>Pump flow</span><b id="fl">0 L/min</b></div><i><u id="fb"></u></i></div>
+<div class="g"><div><span>Platform height</span><b id="ht">0 %</b></div><i><u id="hb"></u></i></div>
+<div id="msg" aria-live="polite"></div>
+</aside></div></main>
+<script>
+const $=id=>document.getElementById(id),NS='http://www.w3.org/2000/svg';
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const D={suction:'M100 260V240H230V200',pout:'M260 170H340',rel1:'M300 170V135',rel2:'M300 105V70H640',bus:'M640 70V370H150',drain:'M360 200V370',cyl:'M440 150H500V320H540',lowIn:'M500 270H445',lowOut:'M412 285V370'};
+const HOT=['pout','rel1','cyl'],P={};
+for(const k in D){
+  const b=document.createElementNS(NS,'path');b.setAttribute('d',D[k]);$('base').appendChild(b);
+  const f=document.createElementNS(NS,'path');f.setAttribute('d',D[k]);
+  f.setAttribute('stroke',HOT.includes(k)?'var(--oil)':'var(--ret)');$('flow').appendChild(f);
+  P[k]={f,off:0,on:false,sp:0};
+}
+const S={pto:false,rpm:1200,up:false,down:false,ext:0,low:0.12,gear:0};
+const set=(k,on,sp)=>{P[k].on=on;P[k].sp=sp};
+$('pto').onclick=()=>{S.pto=!S.pto};
+$('rpm').oninput=e=>{S.rpm=+e.target.value};
+$('low').oninput=e=>{S.low=+e.target.value};
+$('up').onclick=()=>{S.up=true;S.down=false};
+$('down').onclick=()=>{S.down=true;S.up=false};
+$('stop').onclick=()=>{S.up=false;S.down=false};
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(.05,(now-last)/1000);last=now;
+  const flow=S.pto?20*S.rpm/1000:0;
+  const load=S.ext>0.001?40+25*S.ext:0;
+  const upOn=S.pto&&S.up, top=upOn&&S.ext>=1, rising=upOn&&!top;
+  const lowering=S.down&&S.ext>0;
+  let pump=0,msg='';
+  if(rising){S.ext=Math.min(1,S.ext+flow/144*dt);pump=load+10+flow*.15}
+  else if(top)pump=160;
+  else if(S.pto)pump=4+flow*.1;
+  if(lowering){S.ext=Math.max(0,S.ext-S.low*dt);if(S.ext<=0)S.down=false}
+  const cyl=S.ext>0.001?40+25*S.ext:0;
+  const ps=20+flow*3, ls=20+S.low*500;
+  set('suction',S.pto,ps);set('pout',S.pto,ps);
+  set('drain',S.pto&&!rising&&!top,ps);
+  set('rel1',top,ps);set('rel2',top,ps);
+  set('cyl',rising,ps);
+  set('lowIn',lowering,ls);set('lowOut',lowering,ls);
+  set('bus',(S.pto&&!rising)||lowering,Math.max(ps*(S.pto&&!rising?1:0),ls*(lowering?1:0)));
+  for(const k in P){const p=P[k];p.f.style.opacity=p.on?1:0;if(p.on&&!RM){p.off-=p.sp*dt;p.f.setAttribute('stroke-dashoffset',p.off)}}
+  if(S.pto&&!RM){S.gear+=S.rpm*.25*dt;$('g1').setAttribute('transform','rotate('+S.gear+' 217 170)');$('g2').setAttribute('transform','rotate('+(-S.gear)+' 243 170)')}
+  $('clutch').setAttribute('x',S.pto?156:170);
+  $('shaft').setAttribute('stroke',S.pto?'var(--ink)':'var(--steel)');
+  const rodTop=250-S.ext*150;
+  $('rod').setAttribute('y',rodTop);$('rod').setAttribute('height',250-rodTop+1);
+  $('plat').setAttribute('transform','translate(0,'+(-S.ext*150)+')');
+  $('co').setAttribute('y',338-(S.ext>0?8+78*S.ext:0));$('co').setAttribute('height',S.ext>0?8+78*S.ext:0);
+  const oh=90-25*S.ext;$('oil').setAttribute('y',378-oh);$('oil').setAttribute('height',oh);
+  $('vs').textContent=top?'RELIEF OPEN':rising?'RAISE':'NEUTRAL';
+  $('vd').textContent=top?'pump to tank at 160 bar':rising?'pump to cylinder':S.pto?'pump to tank':'pump stopped';
+  $('vb').setAttribute('stroke',rising||top?'var(--oil)':'var(--ink)');
+  $('pto').textContent=S.pto?'Disengage PTO gear':'Engage PTO gear';$('pto').classList.toggle('on',S.pto);
+  $('up').classList.toggle('on',S.up);$('down').classList.toggle('on',S.down);
+  $('rv').textContent=S.rpm+' rpm';$('lv').textContent=Math.round(1/S.low)+' s';
+  $('pp').textContent=Math.round(pump)+' bar';$('pb').style.width=Math.min(100,pump/160*100)+'%';
+  $('cp').textContent=Math.round(cyl)+' bar';$('cb').style.width=Math.min(100,cyl/160*100)+'%';
+  $('fl').textContent=flow.toFixed(1)+' L/min';$('fb').style.width=flow/44*100+'%';
+  $('ht').textContent=Math.round(S.ext*100)+' %';$('hb').style.width=S.ext*100+'%';
+  if(top)msg='End of stroke: the relief valve is open and all pump oil is dumping to tank at 160 bar. Press STOP.';
+  else if(S.up&&!S.pto)msg='UP is selected but the pump is not turning. Engage the PTO gear.';
+  else if(rising)msg='Pump oil goes through the valve and check valve into the cylinder, so the platform rises.';
+  else if(lowering)msg='Lowering valve is open. The platform weight pushes oil from the cylinder back to the tank.';
+  else if(!S.pto&&S.ext>0)msg='Pump stopped. The check valve traps oil in the cylinder, so the platform holds its height.';
+  else if(S.pto&&S.ext>0)msg='Stopped. The valve is neutral, pump oil returns to tank at low pressure and the check valve holds the platform.';
+  else if(S.pto)msg='PTO engaged. Pump runs at low pressure with oil returning to tank. Press Up to raise.';
+  else msg='PTO disengaged. Engage the gear to start the pump.';
+  $('msg').textContent=msg;
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+</script></body></html>
